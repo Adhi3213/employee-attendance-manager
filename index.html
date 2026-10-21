@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Attendance Manager</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #182230;
+      --muted: #667085;
+      --primary: #2859d6;
+      --border: #e4e9f1;
+      --green: #137a4b;
+      --red: #b42318;
+      --amber: #915c00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: #172b4d;
+      color: white;
+      padding: 26px 20px;
+    }
+    .header-inner, main { max-width: 1100px; margin: 0 auto; }
+    header h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 3vw, 2rem); }
+    header p { margin: 0; color: #d6e2ff; }
+    main { padding: 24px 20px 44px; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: end;
+      justify-content: space-between; margin-bottom: 18px;
+    }
+    label { display: block; font-size: .9rem; font-weight: 700; margin-bottom: 6px; }
+    input, select, button {
+      font: inherit; border-radius: 8px; padding: 10px 12px;
+    }
+    input, select { border: 1px solid #cbd5e1; background: white; width: 100%; }
+    button { border: 0; cursor: pointer; font-weight: 700; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid #a9c1ff; outline-offset: 2px;
+    }
+    .primary { background: var(--primary); color: white; }
+    .secondary { background: #eaf0ff; color: #1d45a5; }
+    .danger { background: #fff0ee; color: var(--red); }
+    .cards {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px; margin-bottom: 20px;
+    }
+    .card, .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; box-shadow: 0 3px 12px rgba(16, 24, 40, .04);
+    }
+    .card { padding: 18px; }
+    .card .label { color: var(--muted); font-size: .9rem; }
+    .card .number { display: block; font-size: 1.8rem; font-weight: 800; margin-top: 8px; }
+    .panel { padding: 20px; margin-bottom: 20px; }
+    .panel h2 { margin: 0 0 16px; font-size: 1.15rem; }
+    .form-grid {
+      display: grid; grid-template-columns: 1.4fr 1.4fr 1fr auto;
+      gap: 12px; align-items: end;
+    }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; min-width: 760px; }
+    th, td { text-align: left; padding: 13px 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .status {
+      display: inline-block; padding: 5px 9px; border-radius: 999px;
+      font-size: .82rem; font-weight: 700;
+    }
+    .present { color: var(--green); background: #e8f7ef; }
+    .absent { color: var(--red); background: #fff0ee; }
+    .not-marked { color: var(--amber); background: #fff4d6; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .actions button { padding: 7px 9px; font-size: .82rem; }
+    .empty { color: var(--muted); text-align: center; padding: 28px; }
+    .note { color: var(--muted); font-size: .9rem; line-height: 1.5; }
+    .error { color: var(--red); min-height: 1.2em; margin: 10px 0 0; font-size: .9rem; }
+    .footer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    @media (max-width: 800px) {
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      main { padding: 18px 12px 32px; }
+      .cards { gap: 8px; }
+      .card { padding: 13px; }
+      .card .number { font-size: 1.5rem; }
+      .form-grid { grid-template-columns: 1fr; }
+      .panel { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>Employee Attendance Manager</h1>
+      <p>A beginner portfolio project for recording daily employee attendance.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="toolbar" aria-label="Attendance controls">
+      <div>
+        <label for="attendanceDate">Attendance date</label>
+        <input id="attendanceDate" type="date">
+      </div>
+      <div>
+        <label for="searchInput">Search employees</label>
+        <input id="searchInput" type="search" placeholder="Search name or department">
+      </div>
+      <button id="exportButton" class="secondary" type="button">Export CSV</button>
+    </section>
+
+    <section class="cards" aria-label="Attendance summary">
+      <div class="card"><span class="label">Total employees</span><strong class="number" id="totalCount">0</strong></div>
+      <div class="card"><span class="label">Present</span><strong class="number" id="presentCount">0</strong></div>
+      <div class="card"><span class="label">Absent</span><strong class="number" id="absentCount">0</strong></div>
+      <div class="card"><span class="label">Not marked</span><strong class="number" id="unmarkedCount">0</strong></div>
+    </section>
+
+    <section class="panel">
+      <h2>Add an employee</h2>
+      <form id="employeeForm" class="form-grid">
+        <div>
+          <label for="employeeName">Employee name</label>
+          <input id="employeeName" name="employeeName" placeholder="e.g. Ananya Nair" required maxlength="60">
+        </div>
+        <div>
+          <label for="department">Department</label>
+          <input id="department" name="department" placeholder="e.g. Engineering" required maxlength="50">
+        </div>
+        <div>
+          <label for="employeeId">Employee ID</label>
+          <input id="employeeId" name="employeeId" placeholder="e.g. EMP004" required maxlength="20">
+        </div>
+        <button class="primary" type="submit">Add employee</button>
+      </form>
+      <p id="formMessage" class="error" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Attendance records</h2>
+      <p class="note">Choose a date, then mark each employee Present or Absent. Records are saved in this browser on this device.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Employee ID</th><th>Name</th><th>Department</th><th>Status</th><th>Check-in</th><th>Check-out</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="employeeTableBody"></tbody>
+        </table>
+        <div id="emptyMessage" class="empty" hidden>No employees yet. Add your first employee above.</div>
+      </div>
+      <div class="footer-actions">
+        <button id="loadDemoButton" class="secondary" type="button">Load sample employees</button>
+        <button id="clearDataButton" class="danger" type="button">Clear all data</button>
+      </div>
+    </section>
+
+    <p class="note"><strong>Portfolio note:</strong> This version is a frontend demo. It does not use a server, shared database, login system or secure employee records. Use sample data only.</p>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "employeeAttendancePortfolio_v1";
+    const dateInput = document.getElementById("attendanceDate");
+    const searchInput = document.getElementById("searchInput");
+    const employeeForm = document.getElementById("employeeForm");
+    const tableBody = document.getElementById("employeeTableBody");
+    const emptyMessage = document.getElementById("emptyMessage");
+    const formMessage = document.getElementById("formMessage");
+
+    function todayString() {
+      const now = new Date();
+      const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+      return localDate.toISOString().slice(0, 10);
+    }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return { employees: [], attendance: {} };
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed.employees) || typeof parsed.attendance !== "object") {
+          return { employees: [], attendance: {} };
+        }
+        return parsed;
+      } catch (error) {
+        return { employees: [], attendance: {} };
+      }
+    }
+
+    let state = loadState();
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function selectedDateRecords() {
+      if (!state.attendance[dateInput.value]) state.attendance[dateInput.value] = {};
+      return state.attendance[dateInput.value];
+    }
+
+    function getRecord(employeeId) {
+      return selectedDateRecords()[employeeId] || { status: "Not marked", checkIn: "", checkOut: "" };
+    }
+
+    function updateRecord(employeeId, changes) {
+      const records = selectedDateRecords();
+      const oldRecord = getRecord(employeeId);
+      records[employeeId] = { ...oldRecord, ...changes };
+      saveState();
+      render();
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[character]);
+    }
+
+    function render() {
+      const query = searchInput.value.trim().toLowerCase();
+      const records = selectedDateRecords();
+      const visibleEmployees = state.employees.filter(employee =>
+        `${employee.name} ${employee.department} ${employee.id}`.toLowerCase().includes(query)
+      );
+
+      let present = 0, absent = 0, unmarked = 0;
+      state.employees.forEach(employee => {
+        const record = records[employee.id] || { status: "Not marked" };
+        if (record.status === "Present") present++;
+        else if (record.status === "Absent") absent++;
+        else unmarked++;
+      });
+
+      document.getElementById("totalCount").textContent = state.employees.length;
+      document.getElementById("presentCount").textContent = present;
+      document.getElementById("absentCount").textContent = absent;
+      document.getElementById("unmarkedCount").textContent = unmarked;
+
+      tableBody.innerHTML = visibleEmployees.map(employee => {
+        const record = getRecord(employee.id);
+        const statusClass = record.status === "Present" ? "present" :
+          record.status === "Absent" ? "absent" : "not-marked";
+        return `<tr>
+          <td>${escapeHtml(employee.id)}</td>
+          <td>${escapeHtml(employee.name)}</td>
+          <td>${escapeHtml(employee.department)}</td>
+          <td><span class="status ${statusClass}">${escapeHtml(record.status)}</span></td>
+          <td>${escapeHtml(record.checkIn || "—")}</td>
+          <td>${escapeHtml(record.checkOut || "—")}</td>
+          <td><div class="actions">
+            <button class="secondary" data-action="present" data-id="${escapeHtml(employee.id)}">Present</button>
+            <button class="danger" data-action="absent" data-id="${escapeHtml(employee.id)}">Absent</button>
+            <button class="secondary" data-action="checkin" data-id="${escapeHtml(employee.id)}">Check in</button>
+            <button class="secondary" data-action="checkout" data-id="${escapeHtml(employee.id)}">Check out</button>
+            <button class="danger" data-action="delete" data-id="${escapeHtml(employee.id)}">Delete</button>
+          </div></td>
+        </tr>`;
+      }).join("");
+
+      emptyMessage.hidden = visibleEmployees.length !== 0;
+    }
+
+    employeeForm.addEventListener("submit", event => {
+      event.preventDefault();
+      formMessage.textContent = "";
+      const name = document.getElementById("employeeName").value.trim();
+      const department = document.getElementById("department").value.trim();
+      const id = document.getElementById("employeeId").value.trim().toUpperCase();
+
+      if (!name || !department || !id) {
+        formMessage.textContent = "Please fill in all three fields.";
+        return;
+      }
+      if (state.employees.some(employee => employee.id.toLowerCase() === id.toLowerCase())) {
+        formMessage.textContent = "That employee ID already exists. Please use a unique ID.";
+        return;
+      }
+
+      state.employees.push({ id, name, department });
+      saveState();
+      employeeForm.reset();
+      render();
+    });
+
+    tableBody.addEventListener("click", event => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const { action, id } = button.dataset;
+      const employee = state.employees.find(item => item.id === id);
+      if (!employee) return;
+
+      if (action === "present") updateRecord(id, { status: "Present" });
+      if (action === "absent") updateRecord(id, { status: "Absent", checkIn: "", checkOut: "" });
+      if (action === "checkin") {
+        const now = new Date();
+        const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        updateRecord(id, { status: "Present", checkIn: time });
+      }
+      if (action === "checkout") {
+        const now = new Date();
+        const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        updateRecord(id, { status: "Present", checkOut: time });
+      }
+      if (action === "delete") {
+        if (!confirm(`Delete ${employee.name} and their saved attendance records?`)) return;
+        state.employees = state.employees.filter(item => item.id !== id);
+        Object.values(state.attendance).forEach(day => delete day[id]);
+        saveState();
+        render();
+      }
+    });
+
+    searchInput.addEventListener("input", render);
+    dateInput.addEventListener("change", render);
+
+    document.getElementById("loadDemoButton").addEventListener("click", () => {
+      const samples = [
+        { id: "EMP001", name: "Ananya Nair", department: "Engineering" },
+        { id: "EMP002", name: "Rahul Menon", department: "Human Resources" },
+        { id: "EMP003", name: "Maya Thomas", department: "Finance" }
+      ];
+      samples.forEach(sample => {
+        if (!state.employees.some(employee => employee.id === sample.id)) state.employees.push(sample);
+      });
+      saveState();
+      render();
+    });
+
+    document.getElementById("clearDataButton").addEventListener("click", () => {
+      if (!confirm("This will delete all employees and attendance records saved in this browser. Continue?")) return;
+      state = { employees: [], attendance: {} };
+      saveState();
+      render();
+    });
+
+    document.getElementById("exportButton").addEventListener("click", () => {
+      const records = selectedDateRecords();
+      const rows = [["Date", "Employee ID", "Name", "Department", "Status", "Check-in", "Check-out"]];
+      state.employees.forEach(employee => {
+        const record = records[employee.id] || { status: "Not marked", checkIn: "", checkOut: "" };
+        rows.push([dateInput.value, employee.id, employee.name, employee.department,
+          record.status, record.checkIn, record.checkOut]);
+      });
+      const csv = rows.map(row => row.map(value =>
+        `"${String(value).replace(/"/g, '""')}"`
+      ).join(",")).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `attendance-${dateInput.value}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    dateInput.value = todayString();
+    render();
+  </script>
+</body>
+</html>
